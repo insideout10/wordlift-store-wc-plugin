@@ -1,0 +1,1 @@
+# wordlift-store-wc-plugin
