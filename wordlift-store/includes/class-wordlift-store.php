@@ -58,6 +58,15 @@ class Wordlift_Store {
 	protected $version;
 
 	/**
+	 * The Subscriptions service.
+	 *
+	 * @since 1.0.0
+	 * @access private
+	 * @var \Wordlift_Store_Subscriptions_Service $subscriptions_service The Subscriptions service.
+	 */
+	private $subscriptions_service;
+
+	/**
 	 * Define the core functionality of the plugin.
 	 *
 	 * Set the plugin name and the plugin version that can be used throughout the plugin.
@@ -97,6 +106,16 @@ class Wordlift_Store {
 	private function load_dependencies() {
 
 		/**
+		 * The class responsible for logging.
+		 */
+		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-wordlift-store-log-service.php';
+
+		/**
+		 * The class responsible to activate/deactivate WordLift keys accordingly to the coresponding subscription status.
+		 */
+		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'includes/class-wordlift-store-subscriptions-service.php';
+
+		/**
 		 * The class responsible for orchestrating the actions and filters of the
 		 * core plugin.
 		 */
@@ -120,6 +139,9 @@ class Wordlift_Store {
 		require_once plugin_dir_path( dirname( __FILE__ ) ) . 'public/class-wordlift-store-public.php';
 
 		$this->loader = new Wordlift_Store_Loader();
+
+		// Create an instance of the Subscriptions service.
+		$this->subscriptions_service = new Wordlift_Store_Subscriptions_Service();
 
 	}
 
