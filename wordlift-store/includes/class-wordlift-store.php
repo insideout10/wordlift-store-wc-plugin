@@ -192,11 +192,10 @@ class Wordlift_Store {
 		$this->loader->add_action( 'wp_enqueue_scripts', $plugin_public, 'enqueue_styles' );
 		$this->loader->add_action( 'wp_enqueue_scripts', $plugin_public, 'enqueue_scripts' );
 
-		// https://docs.woothemes.com/document/subscriptions/develop/action-reference/
-		$this->loader->add_action( 'activated_subscription', $subscriptions_service, 'activated_subscription' );
-		$this->loader->add_action( 'cancelled_subscription', $subscriptions_service, 'cancelled_subscription' );
-		$this->loader->add_action( 'processed_subscription_payment_failure', $subscriptions_service, 'processed_subscription_payment_failure' );
-
+		// $this->loader->add_action( 'woocommerce_subscription_status_active', $this->subscriptions_service, 'activated_subscription' );
+		
+		$this->loader->add_action( 'woocommerce_subscription_status_updated', $this->subscriptions_service, 'woocommerce_subscription_status_updated', 10, 3 );
+				
 	}
 
 	/**

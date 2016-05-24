@@ -4,6 +4,8 @@
  * The Subscriptions service. 
  * Uses WooCommerce Subscriptions hooks to activate/deactivate WordLift key
  * @see https://docs.woothemes.com/document/subscriptions/develop/action-reference/
+ * @see https://docs.woothemes.com/document/subscriptions/develop/version-2/
+ * @see https://docs.woothemes.com/document/subscriptions/renewal-process/
  *
  * @since 1.0.0
  */
@@ -37,38 +39,50 @@ class Wordlift_Store_Subscriptions_Service {
 	 * @param int $user_id The ID of the user for whom the subscription was activated.
 	 * @param string $subscription_key The key for the subscription that was just set as activated on the user’s account.
 	 */
-	public function activated_subscription( $user_id, $subscription_key ) {
+	public function activated_subscription( $subscription ) {
 
-		$this->log_service->debug( "Subscription $subscription_key activated for user $user_id" );
+		$this->log_service->debug( "Subscription with status " . $subscription->get_status() );
+		$this->log_service->debug( var_export( $subscription, true ) );
+
+		$user = $subscription->get_user();
+		$this->log_service->debug( "For user ..." );
+		$this->log_service->debug( var_export( $user, true ) );
+	
 	}
 
 	/**
-	 * Called on 'cancelled_subscription' hook.
+	 * Called on 'woocommerce_subscription_status_updated' hook.
 	 *
 	 * @since 1.0.0
 	 *
-	 * @param int $user_id The ID of the user for whom the subscription was cancelled.
-	 * @param string $subscription_key The key for the subscription that was just cancelled on the user’s account.
+	 * @param int $user_id The ID of the user for whom the subscription was activated.
+	 * @param string $subscription_key The key for the subscription that was just set as activated on the user’s account.
 	 */
-	public function cancelled_subscription( $user_id, $subscription_key ) {
+	public function woocommerce_subscription_status_updated( $subscription, $new_status, $old_status ) {
 
-		$this->log_service->debug( "Subscription $subscription_key cancelled for user $user_id" );
+		$this->log_service->debug( "Subscription $subscription->id changed status from $old_status to $new_status" );
+
+		switch ( $new_status ) {
+
+			case 'pending' :
+			case 'switched' :
+				$this->log_service->debug( "Subscription $subscription->id $new_status is pending: nothing to do here" );	
+			break;
+
+			case 'pending-cancel' :
+			case 'failed' : // core WC order status mapped internally to avoid exceptions
+			case 'on-hold' :
+			case 'cancelled' :
+			case 'expired' :
+				$this->log_service->debug( "Related WordLift key has to be suspended!" );			
+			break;
+
+			case 'completed' : // core WC order status mapped internally to avoid exceptions
+			case 'active' :
+				$this->log_service->debug( "Related WordLift key has to be activated!" );			
+			break;
+
+		}
 	}
-
-	/**
-	 * Called on 'processed_subscription_payment_failure' hook.
-	 *
-	 * @since 1.0.0
-	 *
-	 * @param int $user_id The ID of the user who owns the subscription.
-	 * @param string $subscription_key The key for the subscription to which the failed payment relates.
-	 */
-	public function processed_subscription_payment_failure( $user_id, $subscription_key ) {
-
-		$this->log_service->debug( "Payment failed for subscription $subscription_key owned by user $user_id" );
-	}
-
-
-
 
 }
