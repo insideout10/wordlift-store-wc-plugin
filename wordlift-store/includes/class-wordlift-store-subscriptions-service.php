@@ -7,6 +7,11 @@
  */
 class Wordlift_Store_Subscriptions_Service {
 
+	const WS_API_URL = 'http://wls.bla/';
+
+	const NOTIFY_KEY_ACTIVATION = 'activate';
+	const NOTIFY_KEY_SUSPENSION = 'suspend';
+
 	/**
 	 * The Log service.
 	 *
@@ -50,32 +55,83 @@ class Wordlift_Store_Subscriptions_Service {
 
 			case 'pending-cancel' : 
 				
-				$this->log_service->debug( "Related WordLift key has to be suspended!" );			
-				do_action( 'wordlift_notify_key_suspension', $subscription );
-				
+				// Suspend related WL key
+				$this->notify_key_suspension_for( $subscription );
+			
 				$stored_start_date = $subscription->get_time( 'start_date' );
 				// If the customer cancelled the subscription within 14 days from the purchase 
 				// we have to consider this action as a withdrawal and proceed to refund the customer
 				if ( $stored_start_date > ( gmdate( 'U' ) - 14 * DAY_IN_SECONDS ) ) { 
 					$this->log_service->debug( "Withdrawal requested for subscription $subscription->id!" );			
-					do_action( 'wordlift_notify_withdrawal_request', $subscription );
+					// Add a custom not to the order
+					$message = __( 'Withdrawal requested for the related subscription. Refund is required.', 'wordlift-store' );
+					$subscription->add_order_note( $message );
 				}
+
 			break;
 
 			case 'failed' : // core WC order status mapped internally to avoid exceptions
 			case 'on-hold' :
 			case 'cancelled' :
 			case 'expired' :
-				$this->log_service->debug( "Related WordLift key has to be suspended!" );			
-				do_action( 'wordlift_notify_key_suspension', $subscription );
+				// Suspend related WL key
+				$this->notify_key_suspension_for( $subscription );
 			break;
 
 			case 'completed' : // core WC order status mapped internally to avoid exceptions
 			case 'active' :
-				$this->log_service->debug( "Related WordLift key has to be activated!" );			
-				do_action( 'wordlift_notify_key_activation', $subscription );
+				// Activate related WL key
+				$this->notify_key_activation_for( $subscription );
 			break;
 
 		}
+	}
+
+	/**
+	 * @since 1.0.0
+	 *
+	 * @param WC_Subscription $subscription The current subscription obejct.
+	 */
+	public function notify_key_activation_for( $subscription ) {
+		$this->notify_key_activation_for( $subscription, self::NOTIFY_KEY_ACTIVATION );
+	}
+
+	/**
+	 * @since 1.0.0
+	 *
+	 * @param WC_Subscription $subscription The current subscription obejct.
+	 */
+	public function notify_key_suspension_for( $subscription ) {
+		$this->notify_key_activation_for( $subscription, self::NOTIFY_KEY_SUSPENSION );
+	}
+
+	/**
+	 * @since 1.0.0
+	 *
+	 * @param WC_Subscription $subscription The current subscription obejct.
+	 * @param string $action Action to be performed on WL key related to $subscription.
+	 */
+	public function notify( $subscription, $action ) {
+
+		$this->log_service->debug( "Going to $action WL key for subscription $subscription->id!" );						
+		// Retrieve user obj
+		$user = $subscription->get_user();
+		// Prepare params
+		$params = array(
+			'method' => 'POST',
+			'body'   => array(
+				'sku'				=> $subscription->get_sku(),
+				'order_id'			=> $subscription->id,
+				'user_id'			=> $user->id,
+				'user_last_name'	=> $user->last_name,
+				'user_first_name'	=> $user->first_name,
+				'user_email'		=> $user->user_email,
+				'action'			=> $action
+			)
+		)
+
+		$this->log_service->debug( var_export( $notify, true ) );
+		// Perform notification
+		wp_remote_post( self::WS_API_URL . 'subscriptions', $params );
 	}
 }
