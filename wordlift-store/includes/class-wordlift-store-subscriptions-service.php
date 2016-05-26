@@ -115,8 +115,7 @@ class Wordlift_Store_Subscriptions_Service {
 
 		$this->log_service->debug( "Going to $action WL key for subscription $subscription->id!" );						
 		// $this->log_service->debug( var_export( $subscription, true ) );
-		$this->log_service->debug( var_export( $subscription->get_items(), true ) );
-
+		
 		// Retrieve user obj
 		$user = $subscription->get_user();
 		// Retrieve the first order item
@@ -138,7 +137,7 @@ class Wordlift_Store_Subscriptions_Service {
 			)
 		);
 
-		$this->log_service->debug( var_export( $params, true ) );
+		// $this->log_service->debug( var_export( $params, true ) );
 		// Perform notification
 		wp_remote_post( self::WS_API_URL . 'subscriptions', $params );
 	}
