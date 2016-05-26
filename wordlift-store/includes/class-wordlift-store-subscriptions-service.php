@@ -93,7 +93,7 @@ class Wordlift_Store_Subscriptions_Service {
 	 * @param WC_Subscription $subscription The current subscription obejct.
 	 */
 	public function notify_key_activation_for( $subscription ) {
-		$this->notify_key_activation_for( $subscription, self::NOTIFY_KEY_ACTIVATION );
+		$this->notify( $subscription, self::NOTIFY_KEY_ACTIVATION );
 	}
 
 	/**
@@ -102,7 +102,7 @@ class Wordlift_Store_Subscriptions_Service {
 	 * @param WC_Subscription $subscription The current subscription obejct.
 	 */
 	public function notify_key_suspension_for( $subscription ) {
-		$this->notify_key_activation_for( $subscription, self::NOTIFY_KEY_SUSPENSION );
+		$this->notify( $subscription, self::NOTIFY_KEY_SUSPENSION );
 	}
 
 	/**
@@ -114,23 +114,31 @@ class Wordlift_Store_Subscriptions_Service {
 	public function notify( $subscription, $action ) {
 
 		$this->log_service->debug( "Going to $action WL key for subscription $subscription->id!" );						
+		// $this->log_service->debug( var_export( $subscription, true ) );
+		$this->log_service->debug( var_export( $subscription->get_items(), true ) );
+
 		// Retrieve user obj
 		$user = $subscription->get_user();
+		// Retrieve the first order item
+		$item = array_shift( array_values( $subscription->get_items() ) );
+		// Retrieve the product obj
+		$product = WC()->product_factory->get_product( $item[ 'product_id' ] );
+
 		// Prepare params
 		$params = array(
 			'method' => 'POST',
 			'body'   => array(
-				'sku'				=> $subscription->get_sku(),
-				'order_id'			=> $subscription->id,
+				'sku'				=> $product->get_sku(),
+				'order_id'			=> $subscription->id, // Check
 				'user_id'			=> $user->id,
 				'user_last_name'	=> $user->last_name,
 				'user_first_name'	=> $user->first_name,
 				'user_email'		=> $user->user_email,
 				'action'			=> $action
 			)
-		)
+		);
 
-		$this->log_service->debug( var_export( $notify, true ) );
+		$this->log_service->debug( var_export( $params, true ) );
 		// Perform notification
 		wp_remote_post( self::WS_API_URL . 'subscriptions', $params );
 	}
