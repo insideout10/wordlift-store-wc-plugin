@@ -63,9 +63,11 @@ class Wordlift_Store_Subscriptions_Service {
 				// we have to consider this action as a withdrawal and proceed to refund the customer
 				if ( $stored_start_date > ( gmdate( 'U' ) - 14 * DAY_IN_SECONDS ) ) { 
 					$this->log_service->debug( "Withdrawal requested for subscription $subscription->id!" );			
-					// Add a custom not to the order
+					// Get current subscription last (first) order
+					$last_order = $subscription->get_last_order( 'all' );
+					// Add a note to the subscription order
 					$message = __( 'Withdrawal requested for the related subscription. Refund is required.', 'wordlift-store' );
-					$subscription->add_order_note( $message );
+					$last_order->add_order_note( $message );
 				}
 
 			break;
