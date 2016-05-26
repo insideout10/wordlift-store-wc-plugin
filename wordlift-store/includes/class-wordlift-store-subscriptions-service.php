@@ -2,10 +2,6 @@
 
 /**
  * The Subscriptions service. 
- * Uses WooCommerce Subscriptions hooks to activate/deactivate WordLift key
- * @see https://docs.woothemes.com/document/subscriptions/develop/action-reference/
- * @see https://docs.woothemes.com/document/subscriptions/develop/version-2/
- * @see https://docs.woothemes.com/document/subscriptions/renewal-process/
  *
  * @since 1.0.0
  */
@@ -30,59 +26,56 @@ class Wordlift_Store_Subscriptions_Service {
 		$this->log_service = Wordlift_Store_Log_Service::get_logger( 'Wordlift_Store_Subscriptions_Service' );
 
 	}
-
-	/**
-	 * Called on 'activated_subscription' hook.
-	 *
-	 * @since 1.0.0
-	 *
-	 * @param int $user_id The ID of the user for whom the subscription was activated.
-	 * @param string $subscription_key The key for the subscription that was just set as activated on the user’s account.
-	 */
-	public function activated_subscription( $subscription ) {
-
-		$this->log_service->debug( "Subscription with status " . $subscription->get_status() );
-		$this->log_service->debug( var_export( $subscription, true ) );
-
-		$user = $subscription->get_user();
-		$this->log_service->debug( "For user ..." );
-		$this->log_service->debug( var_export( $user, true ) );
 	
-	}
-
 	/**
 	 * Called on 'woocommerce_subscription_status_updated' hook.
 	 *
 	 * @since 1.0.0
 	 *
-	 * @param int $user_id The ID of the user for whom the subscription was activated.
-	 * @param string $subscription_key The key for the subscription that was just set as activated on the user’s account.
+	 * @param WC_Subscription $subscription The current subscription obejct.
+	 * @param string $new_status New status for the current subscription.
+	 * @param string $old_status Old status for the current subscription.
 	 */
 	public function woocommerce_subscription_status_updated( $subscription, $new_status, $old_status ) {
 
 		$this->log_service->debug( "Subscription $subscription->id changed status from $old_status to $new_status" );
+		// $this->log_service->debug( var_export( $subscription, true ) );
 
 		switch ( $new_status ) {
 
 			case 'pending' :
 			case 'switched' :
-				$this->log_service->debug( "Subscription $subscription->id $new_status is pending: nothing to do here" );	
+				$this->log_service->debug( "Subscription $subscription->id $new_status is $new_status: nothing to do here..." );	
 			break;
 
-			case 'pending-cancel' :
+			case 'pending-cancel' : 
+				
+				$this->log_service->debug( "Related WordLift key has to be suspended!" );			
+				do_action( 'wordlift_notify_key_suspension', $subscription );
+				
+				$stored_start_date = $subscription->get_time( 'start_date' );
+				// If the customer cancelled the subscription within 14 days from the purchase 
+				// we have to consider this action as a withdrawal and proceed to refund the customer
+				if ( $stored_start_date > ( gmdate( 'U' ) - 14 * DAY_IN_SECONDS ) ) { 
+					$this->log_service->debug( "Withdrawal requested for subscription $subscription->id!" );			
+					do_action( 'wordlift_notify_withdrawal_request', $subscription );
+				}
+			break;
+
 			case 'failed' : // core WC order status mapped internally to avoid exceptions
 			case 'on-hold' :
 			case 'cancelled' :
 			case 'expired' :
 				$this->log_service->debug( "Related WordLift key has to be suspended!" );			
+				do_action( 'wordlift_notify_key_suspension', $subscription );
 			break;
 
 			case 'completed' : // core WC order status mapped internally to avoid exceptions
 			case 'active' :
 				$this->log_service->debug( "Related WordLift key has to be activated!" );			
+				do_action( 'wordlift_notify_key_activation', $subscription );
 			break;
 
 		}
 	}
-
 }

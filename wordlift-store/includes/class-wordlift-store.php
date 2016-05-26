@@ -195,7 +195,7 @@ class Wordlift_Store {
 		// $this->loader->add_action( 'woocommerce_subscription_status_active', $this->subscriptions_service, 'activated_subscription' );
 		
 		$this->loader->add_action( 'woocommerce_subscription_status_updated', $this->subscriptions_service, 'woocommerce_subscription_status_updated', 10, 3 );
-				
+					
 	}
 
 	/**
